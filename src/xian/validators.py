@@ -13,8 +13,12 @@ class ValidatorHandler():
         return validators
     
     def get_tendermint_validators(self) -> list[str]:
-        response = requests.get("http://localhost:26657/validators")
-        validators = [base64.b64decode(validator['pub_key']['value']).hex() for validator in response.json()['result']['validators'] if int(validator['voting_power']) > 0]
+        try:
+            response = requests.get("http://localhost:26657/validators")
+            validators = [base64.b64decode(validator['pub_key']['value']).hex() for validator in response.json()['result']['validators'] if int(validator['voting_power']) > 0]
+        except Exception as e:
+            print(f"RPC is not available: {e}")
+            validators = []
         return validators
     
     def to_bytes(self, data: str) -> bytes:
@@ -23,6 +27,8 @@ class ValidatorHandler():
     def build_validator_updates(self) -> list[ValidatorUpdate]:
         validators_state = self.get_validators_from_state()
         validators_tendermint = self.get_tendermint_validators()
+        if len(validators_tendermint) == 0:
+            return []
         updates = []
         for validator in validators_state:
             if validator not in validators_tendermint:
